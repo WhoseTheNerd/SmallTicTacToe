@@ -31,12 +31,15 @@ namespace TicTacToe {
 		}
 
 		ShowWindow(m_Handle, parameters.nCmdShow);
-		UpdateWindow(m_Handle);
+		if (!UpdateWindow(m_Handle)) {
+			throw WindowsException();
+		}
 	}
 
-	Window::~Window()
+	Window::~Window() noexcept
 	{
 		DestroyWindow(m_Handle);
+
 		PostQuitMessage(0);
 		m_Running = false;
 	}
@@ -48,6 +51,13 @@ namespace TicTacToe {
 		{
 			TranslateMessage(&msg);
 			DispatchMessage(&msg);
+		}
+	}
+
+	void Window::Refresh()
+	{
+		if (!RedrawWindow(m_Handle, nullptr, nullptr, RDW_INVALIDATE)) {
+			throw WindowsException();
 		}
 	}
 
@@ -68,7 +78,9 @@ namespace TicTacToe {
 			PAINTSTRUCT ps = { 0 };
 			HDC hdc = BeginPaint(hwnd, &ps);
 
-			FillRect(hdc, &ps.rcPaint, (HBRUSH)(COLOR_WINDOW + 1));
+			if (!FillRect(hdc, &ps.rcPaint, (HBRUSH)(COLOR_WINDOW + 1))) {
+				throw WindowsException();
+			}
 
 			EndPaint(hwnd, &ps);
 			break;

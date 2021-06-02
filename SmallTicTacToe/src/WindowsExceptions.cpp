@@ -9,6 +9,10 @@ namespace TicTacToe {
 	{
 		DWORD errorMessageID = GetLastError();
 		if (errorMessageID == 0) {
+			m_Message = "There is no error";
+#if _DEBUG
+			__debugbreak();
+#endif
 			return;
 		}
 
@@ -31,7 +35,7 @@ namespace TicTacToe {
 	{
 	}
 
-	const char* WindowsException::what() const throw()
+	const char* WindowsException::what() const
 	{
 		return m_Message.c_str();
 	}

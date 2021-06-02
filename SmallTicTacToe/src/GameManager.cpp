@@ -1,8 +1,9 @@
 #include "GameManager.hpp"
 
-#include <Windows.h>
+#include "Windows.hpp"
 
 #include "WindowsExceptions.hpp"
+#include "Random.hpp"
 
 namespace TicTacToe {
 
@@ -28,6 +29,8 @@ namespace TicTacToe {
 			}
 			EnableWindow(m_Checkboxes[1], FALSE);
 
+			m_ResetButton = std::make_unique<Button>(hwnd, 12, hInstance, 5, 375, 185, 35, "Reset");
+
 			this->m_Board = std::make_unique<Board>(hwnd, hInstance, m_CalculateTurn);
 			
 			return 0;
@@ -36,39 +39,16 @@ namespace TicTacToe {
 		Callbacks.OnCommand = [this](HWND hwnd, WPARAM wParam, LPARAM lParam) -> LRESULT {
 			int button = LOWORD(wParam);
 			
-			if (this->m_Board->HandleButtons(hwnd, button)) {
+			if (m_Board->HandleButtons(m_Window, button)) {
 				return 0;
 			}
 
-			if (IsDlgButtonChecked(hwnd, button)) {
-				CheckDlgButton(hwnd, button, BST_UNCHECKED);
-
-				if (button == 1) {
-					m_State = State::PlayerVsPlayer;
-				}
-				else if (button == 2) {
-					m_State = State::PlayerVsBot;
-				}
-			}
-			else {
-				CheckDlgButton(hwnd, button, BST_CHECKED);
-
-				if (button == 1) {
-					m_State = State::PlayerVsBot;
-				}
-				else if (button == 2) {
-					m_State = State::PlayerVsAI;
-				}
+			if (HandleCheckboxes(hwnd, button)) {
+				return 0;
 			}
 
-			if (m_State == State::PlayerVsBot || m_State == State::PlayerVsAI) {
-				EnableWindow(m_Checkboxes[1], TRUE);
-			}
-			else {
-				EnableWindow(m_Checkboxes[1], FALSE);
-				if (!CheckDlgButton(hwnd, 2, BST_UNCHECKED)) {
-					throw WindowsException();
-				}
+			if (button == 12) {
+				m_Board->Reset();
 			}
 
 			return 0;
@@ -112,17 +92,18 @@ namespace TicTacToe {
 			}
 		};
 
-		auto PlayerVsBotFunc = []() -> std::pair<Cell, std::optional<uint8_t>> {
-			MessageBox(nullptr, "Unimplemented function!", "SmallTicTacToe", 0);
-			throw std::runtime_error("Unimplemented function!");
+		auto PlayerVsBotFunc = [this]() -> std::pair<Cell, std::optional<uint8_t>> {
+			std::optional<uint8_t> choice = m_AI.RandomChoice(m_Board.get());
+
+			return std::make_pair(Cell::Cross, choice);
 		};
 
-		auto PlayerVsAIFunc = []() -> std::pair<Cell, std::optional<uint8_t>> {
-			MessageBox(nullptr, "Unimplemented function!", "SmallTicTacToe", 0);
-			throw std::runtime_error("Unimplemented function!");
+		auto PlayerVsAIFunc = [this]() -> std::pair<Cell, std::optional<uint8_t>> {
+			std::optional<uint8_t> choice = m_AI.BestMove(m_Board.get());
+			return std::make_pair(Cell::Cross, choice);
 		};
 
-		m_CalculateTurn = [&](const std::array<Tile*, 9>& tiles) -> std::pair<Cell, std::optional<uint8_t>> {
+		m_CalculateTurn = [=](const std::array<Tile*, 9>& tiles) -> std::pair<Cell, std::optional<uint8_t>> {
 
 			switch (m_State)
 			{
@@ -133,6 +114,46 @@ namespace TicTacToe {
 			case TicTacToe::State::PlayerVsAI:
 				return PlayerVsAIFunc();
 			}
+			
+			throw std::runtime_error("Unimplemented state enumeration switch cases!");
 		};
+	}
+	
+	bool GameManager::HandleCheckboxes(HWND hwnd, int button)
+	{
+		if (button < 0 || button > 2) return false;
+
+		if (IsDlgButtonChecked(hwnd, button)) {
+			CheckDlgButton(hwnd, button, BST_UNCHECKED);
+
+			if (button == 1) {
+				m_State = State::PlayerVsPlayer;
+			}
+			else if (button == 2) {
+				m_State = State::PlayerVsBot;
+			}
+		}
+		else {
+			CheckDlgButton(hwnd, button, BST_CHECKED);
+
+			if (button == 1) {
+				m_State = State::PlayerVsBot;
+			}
+			else if (button == 2) {
+				m_State = State::PlayerVsAI;
+			}
+		}
+
+		if (m_State == State::PlayerVsBot || m_State == State::PlayerVsAI) {
+			EnableWindow(m_Checkboxes[1], TRUE);
+		}
+		else {
+			EnableWindow(m_Checkboxes[1], FALSE);
+			if (!CheckDlgButton(hwnd, 2, BST_UNCHECKED)) {
+				throw WindowsException();
+			}
+		}
+
+		return true;
 	}
 }

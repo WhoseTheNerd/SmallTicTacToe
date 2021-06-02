@@ -1,9 +1,10 @@
-#include <Windows.h>
+#include "Windows.hpp"
 
 #include "Common.hpp"
 #include "Window.hpp"
 #include "WindowsExceptions.hpp"
 #include "GameManager.hpp"
+#include "MessageBox.hpp"
 
 int WINAPI WinMain(HINSTANCE hInstance,
 	HINSTANCE hPrevInstance,
@@ -15,10 +16,11 @@ int WINAPI WinMain(HINSTANCE hInstance,
 		TicTacToe::GameManager manager;
 		TicTacToe::WinMainParameters parameters = { hInstance, hPrevInstance, lpCmdLine, nCmdShow };
 		TicTacToe::Window window("TicTacToe", parameters, manager.Callbacks);
+		manager.SetWindowPtr(&window);
 		window.Run();
 	}
 	catch (std::exception& e) {
-		MessageBox(NULL, e.what(), "Unhandled exception", 0);
+		TicTacToe::MessageBox::Show(e.what(), "Unhandled exception", TicTacToe::MessageBox::Type::Ok, TicTacToe::MessageBox::Icon::Error);
 	}
 	exit(0);
 }

@@ -92,7 +92,7 @@
       <PreprocessorDefinitions>WIN32;_DEBUG;_CONSOLE;NOMINMAX;WIN32_LEAN_AND_MEAN;VC_EXTRALEAN;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <InlineFunctionExpansion>Disabled</InlineFunctionExpansion>
-      <LanguageStandard>stdcpp17</LanguageStandard>
+      <LanguageStandard>stdcpplatest</LanguageStandard>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -116,6 +116,7 @@
       <WholeProgramOptimization>false</WholeProgramOptimization>
       <StringPooling>true</StringPooling>
       <BufferSecurityCheck>false</BufferSecurityCheck>
+      <LanguageStandard>stdcpp17</LanguageStandard>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -156,20 +157,27 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="src\AI.cpp" />
     <ClCompile Include="src\Board.cpp" />
     <ClCompile Include="src\Button.cpp" />
     <ClCompile Include="src\GameManager.cpp" />
     <ClCompile Include="src\main.cpp" />
+    <ClCompile Include="src\MessageBox.cpp" />
+    <ClCompile Include="src\Random.cpp" />
     <ClCompile Include="src\Window.cpp" />
     <ClCompile Include="src\WindowsExceptions.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="src\AI.hpp" />
     <ClInclude Include="src\Board.hpp" />
     <ClInclude Include="src\Button.hpp" />
     <ClInclude Include="src\Common.hpp" />
     <ClInclude Include="src\GameManager.hpp" />
+    <ClInclude Include="src\MessageBox.hpp" />
+    <ClInclude Include="src\Random.hpp" />
     <ClInclude Include="src\Tile.hpp" />
     <ClInclude Include="src\Window.hpp" />
+    <ClInclude Include="src\Windows.hpp" />
     <ClInclude Include="src\WindowsExceptions.hpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

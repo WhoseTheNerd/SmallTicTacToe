@@ -1,3 +1,2 @@
-﻿  GameManager.cpp
-C:\Users\WhoseTheNerd\dev\SmallTicTacToe\SmallTicTacToe\src\GameManager.cpp(136): warning C4715: '<lambda_bf717357cec5092d84380b216ca6cd05>::operator()': not all control paths return a value
+﻿  Board.cpp
   SmallTicTacToe.vcxproj -> C:\Users\WhoseTheNerd\dev\SmallTicTacToe\Debug\SmallTicTacToe.exe

@@ -1,6 +1,6 @@
 #pragma once
 
-#include <Windows.h>
+#include "Windows.hpp"
 #include <string>
 #include <functional>
 
@@ -23,9 +23,11 @@ namespace TicTacToe {
 		};
 	public:
 		Window(const char* title, const WinMainParameters& parameters, const Callbacks& callbacks);
-		~Window();
+		~Window() noexcept;
 
 		void Run();
+
+		void Refresh();
 	private:
 		LRESULT WindowProcedure(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
 		static LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam);

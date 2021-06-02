@@ -2,25 +2,83 @@
 
 #include "WindowsExceptions.hpp"
 
+#include "MessageBox.hpp"
+
 #include <algorithm>
 
 namespace TicTacToe {
 
+	static COLORREF DEFAULT_BUTTON_COLOR = RGB(240, 240, 240);
+
 	Board::Board(HWND hwnd, HINSTANCE hInstance, CalculateTurnFn calculateTurn)
-		: m_CalculateTurn(calculateTurn)
+		: m_Handle(hwnd), m_CalculateTurn(calculateTurn)
 	{
 		for (uint8_t y = 0; y < 3; ++y) {
 			for (uint8_t x = 0; x < 3; ++x) {
 				int menuID = (y * 3) + x + 3;
-				std::unique_ptr<Button> button = std::make_unique<Button>(hwnd, menuID, hInstance, x * 100, y * 100 + 50, 100, 100, RGB(240, 240, 240));
+				std::unique_ptr<Button> button = std::make_unique<Button>(hwnd, menuID, hInstance, x * 100, y * 100 + 50, 100, 100, DEFAULT_BUTTON_COLOR);
 				m_Tiles[CalculateIndex(x, y)] = std::make_unique<Tile>(std::move(button));
 			}
 		}
 	}
 
-	std::optional<std::pair<Player, std::pair<WinningMove, std::array<Button*, 3>>>> Board::CheckWinner()
+	void Board::Reset()
 	{
-		const std::array<std::array<std::pair<uint8_t, uint8_t>, 3>, 8> combinations = {
+		for (std::unique_ptr<Tile>& tile : m_Tiles) {
+			tile->cell = Cell::Empty;
+			tile->button->SetColor(DEFAULT_BUTTON_COLOR);
+			tile->button->SetTitle(" ");
+			EnableWindow(tile->button->GetHandle(), TRUE);
+		}
+
+		RedrawWindow(m_Handle, nullptr, nullptr, RDW_INVALIDATE);
+	}
+
+	template <size_t N = 3>
+	[[nodiscard]] constexpr std::array<std::array<std::pair<uint8_t, uint8_t>, N>, 8> CalculateCombinations()
+	{
+		std::array<std::array<std::pair<uint8_t, uint8_t>, N>, 8> value;
+		size_t iterator = 0;
+		size_t inner_iterator = 0;
+
+		// Add horizontal/row combinations
+		for (uint8_t i = 0; i < N; ++i) {
+			inner_iterator = 0;
+			for (uint8_t j = 0; j < N; ++j) {
+				value[iterator][inner_iterator++] = std::make_pair(i, j);
+			}
+			iterator++;
+		}
+
+		// Add Vertical/column combinations
+		for (uint8_t i = 0; i < N; ++i) {
+			inner_iterator = 0;
+			for (uint8_t j = 0; j < N; ++j) {
+				value[iterator][inner_iterator++] = std::make_pair(j, i);
+			}
+			iterator++;
+		}
+
+		inner_iterator = 0;
+		for (uint8_t i = 0; i < N; ++i) {
+			value[iterator][inner_iterator++] = std::make_pair(i, i);
+		}
+		iterator++;
+
+		inner_iterator = 0;
+		for (uint8_t i = 0; i < N; ++i) {
+			for (uint8_t j = N; j --> 0; ) {
+				value[iterator][inner_iterator++] = std::make_pair(j, i);
+			}
+			iterator++;
+		}
+
+		return value;
+	}
+
+	std::optional<std::pair<Player, std::array<Button*, 3>>> Board::CheckWinner()
+	{
+		constexpr std::array<std::array<std::pair<uint8_t, uint8_t>, 3>, 8> combinations = {
 			// Horizontal
 			std::array<std::pair<uint8_t, uint8_t>, 3>{std::make_pair(0, 0), std::make_pair(1, 0), std::make_pair(2, 0)},
 			std::array<std::pair<uint8_t, uint8_t>, 3>{std::make_pair(0, 1), std::make_pair(1, 1), std::make_pair(2, 1)},
@@ -34,7 +92,10 @@ namespace TicTacToe {
 			std::array<std::pair<uint8_t, uint8_t>, 3>{std::make_pair(0, 2), std::make_pair(1, 1), std::make_pair(2, 0)}
 		};
 
-		const std::array<std::pair<Player, Cell>, 2> players = {
+		//constexpr auto calculated_combinations = CalculateCombinations();
+		//static_assert(combinations == calculated_combinations, "Calculated combinations are wrong for board size of 3 (N = 3)");
+
+		constexpr std::array<std::pair<Player, Cell>, 2> players = {
 			std::make_pair(Player::Player1, Cell::Cross),
 			std::make_pair(Player::Player2, Cell::Nought)
 		};
@@ -45,10 +106,9 @@ namespace TicTacToe {
 
 			for (std::array<std::pair<uint8_t, uint8_t>, 3> combination : combinations) {
 				std::array<Tile*, 3> tiles;
-				for (uint8_t i = 0; i < combination.size(); ++i) {
-					const std::pair<uint8_t, uint8_t> coord = combination[i];
-					tiles[i] = &(*this)[coord];
-				}
+				std::transform(std::begin(combination), std::end(combination), std::begin(tiles), [this](std::pair<uint8_t, uint8_t> coord) {
+					return &(*this)[coord];
+				});
 
 				bool ok = true;
 				for (Tile* tile : tiles) {
@@ -64,7 +124,7 @@ namespace TicTacToe {
 						return tile->button.get();
 					});
 					
-					return std::make_pair(player, std::make_pair(WinningMove::None, buttons));;
+					return std::make_pair(player, buttons);
 				}
 			}
 		}
@@ -83,7 +143,7 @@ namespace TicTacToe {
 		return {};
 	}
 
-	bool Board::HandleButtons(HWND hwnd, int button)
+	bool Board::HandleButtons(Window* window, int button)
 	{
 		if (button < 3 || button > 11) return false;
 
@@ -93,38 +153,45 @@ namespace TicTacToe {
 			return true;
 		}
 
+
 		auto[cell, coord] = m_CalculateTurn(GetRawTiles());
 		if (cell == Cell::Empty) {
 			throw std::runtime_error("Wrong cell value from CalculateTurnFn!");
 		}
-
 		currentTile->cell = cell;
 
-		char playerText[3] = { 0 };
+		// Bot choice
+		if (coord) {
+			Tile* botTile = m_Tiles[coord.value()].get();
+			botTile->cell = Cell::Nought;
+
+			botTile->button->SetTitle("O");
+		}
+
+		std::string playerText;
 
 		switch (cell)
 		{
 		case Cell::Empty:
+			playerText = " ";
 			break;
 		case Cell::Cross:
-			playerText[0] = 'X';
+			playerText = "X";
 			break;
 		case Cell::Nought:
-			playerText[0] = 'O';
+			playerText = "O";
 			break;
 		default:
 			break;
 		}
 
-		if (!SetWindowText(currentTile->button->GetHandle(), playerText)) {
-			throw WindowsException();
-		}
+		currentTile->button->SetTitle(playerText);
 
-		std::optional<std::pair<Player, std::pair<WinningMove, std::array<Button*, 3>>>> winner = CheckWinner();
+		std::optional<std::pair<Player, std::array<Button*, 3>>> winner = CheckWinner();
 
 		if (winner) {
 			Player player = winner->first;
-			std::pair<WinningMove, std::array<Button*, 3>> winningMove = winner->second;
+			std::array<Button*, 3> buttons = winner->second;
 
 			COLORREF color = RGB(255, 255, 255);
 			std::string message;
@@ -143,30 +210,24 @@ namespace TicTacToe {
 				break;
 			}
 
-			std::array<Button*, 3> buttons = winningMove.second;
-
 			for (Button* button : buttons) {
 				button->SetColor(color);
 			}
 
 			for (const auto& tile : m_Tiles) {
-				EnableWindow(tile->button->GetHandle(), FALSE);
+				tile->button->SetState(false);
 			}
 
-			RedrawWindow(hwnd, nullptr, nullptr, RDW_INVALIDATE);
+			window->Refresh();
 
-			MessageBox(hwnd, message.c_str(), "SmallTicTacToe", 0);
+			MessageBox::Show(message.c_str(), "SmallTicTacToe", MessageBox::Type::Ok, MessageBox::Icon::Information, m_Handle);
 		}
 		else if (HasGameEnded()) {
 			for (const auto& tile : m_Tiles) {
-				EnableWindow(tile->button->GetHandle(), FALSE);
+				tile->button->SetState(false);
 			}
-			MessageBox(hwnd, "Game has ended in Tie", "SmallTicTacToe", 0);
+			MessageBox::Show("Game has ended in Tie", "SmallTicTacToe", TicTacToe::MessageBox::Type::Ok, TicTacToe::MessageBox::Icon::Information, m_Handle);
 			return true;
-		}
-
-		if (coord) {
-			HandleButtons(hwnd, coord.value() + 3);
 		}
 
 		return true;
