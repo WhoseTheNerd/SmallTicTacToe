@@ -52,9 +52,9 @@ struct GameStuff
 	bool game_started;
 };
 
-struct GameStuff game_state = { 0 };
+static struct GameStuff game_state = { 0 };
 
-HWND Checkboxes[2] = { 0 };
+static HWND Checkboxes[2] = { 0 };
 
 struct Button
 {
@@ -62,7 +62,7 @@ struct Button
 	COLORREF color;
 };
 
-struct Button Buttons[3][3] = { 0 };
+static struct Button Buttons[3][3] = { 0 };
 
 struct Button FindButton(HWND handle);
 
@@ -72,12 +72,12 @@ struct IntPair
 	int y;
 };
 
-struct IntPair TranslationTable[12] = { 0 };
+static struct IntPair TranslationTable[12] = { 0 };
 
-enum State board[3][3] = { 0 };
+static enum State board[3][3] = { 0 };
 
 // The string that appears in the application's title bar.
-const char* szTitle = "TicTacToe";
+static const char* szTitle = "TicTacToe";
 
 void tct_init();
 void tct_onCreate(HWND hwnd, HINSTANCE hInstance);

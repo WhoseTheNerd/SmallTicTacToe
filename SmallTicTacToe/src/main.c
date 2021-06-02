@@ -84,8 +84,6 @@ struct WinnerStatus check_winner(enum State board[3][3]);
 
 LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 {
-	const char* greeting = "Hello, world!";
-
 	switch (uMsg)
 	{
 	case WM_CREATE:
