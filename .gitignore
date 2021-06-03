@@ -1,1 +1,5 @@
 .vs/**
+Debug/
+Release/
+SmallTicTacToe/Debug
+SmallTicTacToe/Release
