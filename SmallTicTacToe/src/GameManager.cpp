@@ -5,11 +5,17 @@
 #include "WindowsExceptions.hpp"
 #include "Random.hpp"
 
+#include <assert.h>
+
 namespace TicTacToe {
 
 	GameManager::GameManager()
 	{
-		Callbacks.OnCreate = [this](HWND hwnd, WPARAM wParam, LPARAM lParam) -> LRESULT {
+		Callbacks.OnCreate = [this](HWND hwnd, WPARAM wParam, LPARAM lParam, Window* window) -> LRESULT {
+			m_Window = window;
+			m_Window->SetHandle(hwnd);
+			assert(hwnd == m_Window->GetHandle());
+
 			HINSTANCE hInstance = ((LPCREATESTRUCT)lParam)->hInstance;
 
 			m_Checkboxes[0] = CreateWindow("BUTTON", "Play Against Computer", WS_VISIBLE | WS_CHILD | BS_CHECKBOX, 5, 5, 185, 35, hwnd, (HMENU)1, hInstance, nullptr);
@@ -31,7 +37,7 @@ namespace TicTacToe {
 
 			m_ResetButton = std::make_unique<Button>(hwnd, 12, hInstance, 5, 375, 185, 35, "Reset");
 
-			this->m_Board = std::make_unique<Board>(hwnd, hInstance, m_CalculateTurn);
+			this->m_Board = std::make_unique<Board>(m_Window, hInstance, m_CalculateTurn);
 			
 			return 0;
 		};

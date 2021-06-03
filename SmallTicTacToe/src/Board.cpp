@@ -12,13 +12,13 @@ namespace TicTacToe {
 
 	static COLORREF DEFAULT_BUTTON_COLOR = RGB(240, 240, 240);
 
-	Board::Board(HWND hwnd, HINSTANCE hInstance, CalculateTurnFn calculateTurn)
-		: m_Handle(hwnd), m_CalculateTurn(calculateTurn)
+	Board::Board(Window* window, HINSTANCE hInstance, CalculateTurnFn calculateTurn)
+		: m_Window(window), m_CalculateTurn(calculateTurn)
 	{
 		for (uint8_t y = 0; y < 3; ++y) {
 			for (uint8_t x = 0; x < 3; ++x) {
 				int menuID = (y * 3) + x + 3;
-				std::unique_ptr<Button> button = std::make_unique<Button>(hwnd, menuID, hInstance, x * 100, y * 100 + 50, 100, 100, DEFAULT_BUTTON_COLOR);
+				std::unique_ptr<Button> button = std::make_unique<Button>(window->GetHandle(), menuID, hInstance, x * 100, y * 100 + 50, 100, 100, DEFAULT_BUTTON_COLOR);
 				m_Tiles[CalculateIndex(x, y)] = std::make_unique<Tile>(std::move(button));
 			}
 		}
@@ -30,10 +30,10 @@ namespace TicTacToe {
 			tile->cell = Cell::Empty;
 			tile->button->SetColor(DEFAULT_BUTTON_COLOR);
 			tile->button->SetTitle(" ");
-			EnableWindow(tile->button->GetHandle(), TRUE);
+			tile->button->SetState(true);
 		}
 
-		RedrawWindow(m_Handle, nullptr, nullptr, RDW_INVALIDATE);
+		m_Window->Refresh();
 	}
 
 	std::optional<std::pair<Player, std::array<Button*, 3>>> Board::CheckWinner()
@@ -165,13 +165,13 @@ namespace TicTacToe {
 
 			window->Refresh();
 
-			MessageBox::Show(message.c_str(), "SmallTicTacToe", MessageBox::Type::Ok, MessageBox::Icon::Information, m_Handle);
+			MessageBox::Show(message.c_str(), "SmallTicTacToe", MessageBox::Type::Ok, MessageBox::Icon::Information, m_Window->GetHandle());
 		}
 		else if (HasGameEnded()) {
 			for (const auto& tile : m_Tiles) {
 				tile->button->SetState(false);
 			}
-			MessageBox::Show("Game has ended in Tie", "SmallTicTacToe", TicTacToe::MessageBox::Type::Ok, TicTacToe::MessageBox::Icon::Information, m_Handle);
+			MessageBox::Show("Game has ended in Tie", "SmallTicTacToe", TicTacToe::MessageBox::Type::Ok, TicTacToe::MessageBox::Icon::Information, m_Window->GetHandle());
 			return true;
 		}
 

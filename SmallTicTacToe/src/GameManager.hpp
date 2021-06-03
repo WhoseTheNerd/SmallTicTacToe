@@ -21,8 +21,6 @@ namespace TicTacToe {
 		GameManager();
 
 		Window::Callbacks Callbacks;
-
-		void SetWindowPtr(Window* window) { m_Window = window; }
 	private:
 		bool HandleCheckboxes(HWND hwnd, int button);
 	private:

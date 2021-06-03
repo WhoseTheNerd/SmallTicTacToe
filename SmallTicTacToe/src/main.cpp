@@ -16,7 +16,6 @@ int WINAPI WinMain(HINSTANCE hInstance,
 		TicTacToe::GameManager manager;
 		TicTacToe::WinMainParameters parameters = { hInstance, hPrevInstance, lpCmdLine, nCmdShow };
 		TicTacToe::Window window("TicTacToe", parameters, manager.Callbacks);
-		manager.SetWindowPtr(&window);
 		window.Run();
 	}
 	catch (std::exception& e) {

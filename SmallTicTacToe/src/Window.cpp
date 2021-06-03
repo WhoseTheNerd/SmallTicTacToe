@@ -67,7 +67,7 @@ namespace TicTacToe {
 		{
 		case WM_CREATE:
 		{
-			return m_Callbacks.OnCreate(hwnd, wParam, lParam);
+			return m_Callbacks.OnCreate(hwnd, wParam, lParam, this);
 		}
 		case WM_COMMAND:
 		{

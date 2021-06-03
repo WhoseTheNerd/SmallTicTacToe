@@ -25,7 +25,7 @@ namespace TicTacToe {
 	public:
 		using CalculateTurnFn = std::function<std::pair<Cell, std::optional<uint8_t>>(const std::array<Tile*, 9>&)>;
 	public:
-		Board(HWND hwnd, HINSTANCE hInstance, CalculateTurnFn calculateTurn);
+		Board(Window* window, HINSTANCE hInstance, CalculateTurnFn calculateTurn);
 
 		Tile& operator[](uint8_t index)
 		{
@@ -66,7 +66,7 @@ namespace TicTacToe {
 		uint8_t CalculateIndex(uint8_t x, uint8_t y);
 		std::array<Tile*, 9> GetRawTiles();
 	private:
-		HWND m_Handle;
+		Window* m_Window;
 		std::array<std::unique_ptr<Tile>, 9> m_Tiles;
 		CalculateTurnFn m_CalculateTurn;
 	};

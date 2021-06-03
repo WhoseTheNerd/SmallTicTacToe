@@ -11,7 +11,7 @@ namespace TicTacToe {
 	class Window
 	{
 	public:
-		using OnCreateFn = std::function<LRESULT(HWND, WPARAM, LPARAM)>;
+		using OnCreateFn = std::function<LRESULT(HWND, WPARAM, LPARAM, Window*)>;
 		using OnCommandFn = std::function<LRESULT(HWND, WPARAM, LPARAM)>;
 		using OnDrawItemFn = std::function<LRESULT(HWND, WPARAM, LPARAM)>;
 		
@@ -28,6 +28,9 @@ namespace TicTacToe {
 		void Run();
 
 		void Refresh();
+
+		HWND GetHandle() const { return m_Handle; }
+		void SetHandle(HWND hwnd) { m_Handle = hwnd; }
 	private:
 		LRESULT WindowProcedure(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
 		static LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
