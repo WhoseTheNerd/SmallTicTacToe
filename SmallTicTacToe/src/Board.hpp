@@ -6,6 +6,7 @@
 #include "Common.hpp"
 #include "Tile.hpp"
 #include "Window.hpp"
+#include "Button.hpp"
 
 #include <memory>
 #include <optional>

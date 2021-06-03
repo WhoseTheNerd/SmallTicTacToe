@@ -4,6 +4,8 @@
 
 #include "MessageBox.hpp"
 
+#include "CombinationsGenerator.hpp"
+
 #include <algorithm>
 
 namespace TicTacToe {
@@ -34,66 +36,9 @@ namespace TicTacToe {
 		RedrawWindow(m_Handle, nullptr, nullptr, RDW_INVALIDATE);
 	}
 
-	template <size_t N = 3>
-	[[nodiscard]] constexpr std::array<std::array<std::pair<uint8_t, uint8_t>, N>, 8> CalculateCombinations()
-	{
-		std::array<std::array<std::pair<uint8_t, uint8_t>, N>, 8> value;
-		size_t iterator = 0;
-		size_t inner_iterator = 0;
-
-		// Add horizontal/row combinations
-		for (uint8_t i = 0; i < N; ++i) {
-			inner_iterator = 0;
-			for (uint8_t j = 0; j < N; ++j) {
-				value[iterator][inner_iterator++] = std::make_pair(i, j);
-			}
-			iterator++;
-		}
-
-		// Add Vertical/column combinations
-		for (uint8_t i = 0; i < N; ++i) {
-			inner_iterator = 0;
-			for (uint8_t j = 0; j < N; ++j) {
-				value[iterator][inner_iterator++] = std::make_pair(j, i);
-			}
-			iterator++;
-		}
-
-		inner_iterator = 0;
-		for (uint8_t i = 0; i < N; ++i) {
-			value[iterator][inner_iterator++] = std::make_pair(i, i);
-		}
-		iterator++;
-
-		inner_iterator = 0;
-		for (uint8_t i = 0; i < N; ++i) {
-			for (uint8_t j = N; j --> 0; ) {
-				value[iterator][inner_iterator++] = std::make_pair(j, i);
-			}
-			iterator++;
-		}
-
-		return value;
-	}
-
 	std::optional<std::pair<Player, std::array<Button*, 3>>> Board::CheckWinner()
 	{
-		constexpr std::array<std::array<std::pair<uint8_t, uint8_t>, 3>, 8> combinations = {
-			// Horizontal
-			std::array<std::pair<uint8_t, uint8_t>, 3>{std::make_pair(0, 0), std::make_pair(1, 0), std::make_pair(2, 0)},
-			std::array<std::pair<uint8_t, uint8_t>, 3>{std::make_pair(0, 1), std::make_pair(1, 1), std::make_pair(2, 1)},
-			std::array<std::pair<uint8_t, uint8_t>, 3>{std::make_pair(0, 2), std::make_pair(1, 2), std::make_pair(2, 2)},
-			// Vertical
-			std::array<std::pair<uint8_t, uint8_t>, 3>{std::make_pair(0, 0), std::make_pair(0, 1), std::make_pair(0, 2)},
-			std::array<std::pair<uint8_t, uint8_t>, 3>{std::make_pair(1, 0), std::make_pair(1, 1), std::make_pair(1, 2)},
-			std::array<std::pair<uint8_t, uint8_t>, 3>{std::make_pair(2, 0), std::make_pair(2, 1), std::make_pair(2, 2)},
-			// Diagonal
-			std::array<std::pair<uint8_t, uint8_t>, 3>{std::make_pair(0, 0), std::make_pair(1, 1), std::make_pair(2, 2)},
-			std::array<std::pair<uint8_t, uint8_t>, 3>{std::make_pair(0, 2), std::make_pair(1, 1), std::make_pair(2, 0)}
-		};
-
-		//constexpr auto calculated_combinations = CalculateCombinations();
-		//static_assert(combinations == calculated_combinations, "Calculated combinations are wrong for board size of 3 (N = 3)");
+		constexpr auto combinations = CalculateCombinations();
 
 		constexpr std::array<std::pair<Player, Cell>, 2> players = {
 			std::make_pair(Player::Player1, Cell::Cross),

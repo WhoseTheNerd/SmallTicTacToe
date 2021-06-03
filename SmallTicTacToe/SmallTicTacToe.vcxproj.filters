@@ -77,5 +77,8 @@
     <ClInclude Include="src\Windows.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="src\CombinationsGenerator.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>
