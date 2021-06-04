@@ -2,6 +2,11 @@
 
 #include <inttypes.h>
 
+static struct tile* get_tile(uint8_t x, uint8_t y)
+{
+	return &board[x * 3 + y];
+}
+
 void tct_init()
 {
 	game_state.player = TCT_PLAYER1;
@@ -9,28 +14,59 @@ void tct_init()
 
 void tct_onCreate(HWND hwnd, HINSTANCE hInstance)
 {
-	Checkboxes[0] = CreateWindow("BUTTON", "Play Against Computer", WS_VISIBLE | WS_CHILD | BS_CHECKBOX, 5, 5, 185, 35, hwnd, (HMENU)1, hInstance, NULL);
-	CheckDlgButton(hwnd, 1, BST_UNCHECKED);
-	Checkboxes[1] = CreateWindow("BUTTON", "Impossible Mode", WS_VISIBLE | WS_CHILD | BS_CHECKBOX, 190, 5, 185, 35, hwnd, (HMENU)2, hInstance, NULL);
-	CheckDlgButton(hwnd, 2, BST_UNCHECKED);
-	EnableWindow(Checkboxes[1], FALSE);
+	struct checkbox_createinfo createInfo = { 0 };
+	createInfo.window_handle = hwnd;
+	createInfo.height = hInstance;
+	createInfo.title = "Play Against Computer";
+	createInfo.x = 5;
+	createInfo.y = 5;
+	createInfo.width = 185;
+	createInfo.height = 35;
+	createInfo.menuID = 1;
+	if (!checkbox_init(&Checkboxes[0], &createInfo)) {
+		ShowErrorMessage();
+	}
+	createInfo.title = "Impossible Mode";
+	createInfo.x = 190;
+	createInfo.y = 5;
+	createInfo.menuID = 2;
+	if (!checkbox_init(&Checkboxes[1], &createInfo)) {
+		ShowErrorMessage();
+	}
 
-	for (int y = 0; y < 3; ++y) {
-		for (int x = 0; x < 3; ++x) {
-			int menuID = (y * 3) + x + 3;
-			struct Button button;
-			button.handle = CreateWindow("BUTTON", " ", WS_TABSTOP | WS_VISIBLE | WS_CHILD | BS_DEFPUSHBUTTON | BS_OWNERDRAW, x * 100, y * 100 + 50, 100, 100, hwnd, (HMENU)menuID, hInstance, NULL);
-			button.color = RGB(240, 240, 240);
-			Buttons[x][y] = button;
-			struct IntPair pair;
-			pair.x = x;
-			pair.y = y;
-			TranslationTable[menuID] = pair;
+	checkbox_ticked(&Checkboxes[0], false);
+	checkbox_ticked(&Checkboxes[1], false);
+	checkbox_enabled(&Checkboxes[1], false);
+
+	struct button_createinfo buttonCreateInfo = { 0 };
+	buttonCreateInfo.window_handle = hwnd;
+	buttonCreateInfo.hInstance = hInstance;
+	buttonCreateInfo.title = " ";
+	buttonCreateInfo.color = RGB(240, 240, 240);
+	buttonCreateInfo.width = 100;
+	buttonCreateInfo.height = 100;
+
+
+	for (uint8_t y = 0; y < 3; ++y) {
+		for (uint8_t x = 0; x < 3; ++x) {
+			uint8_t menuID = (y * 3) + x + 3;
+
+			struct button button = { 0 };
+
+			buttonCreateInfo.x = x * 100;
+			buttonCreateInfo.y = y * 100 + 50;
+			buttonCreateInfo.menuID = menuID;
+
+			if (!button_init(&button, &buttonCreateInfo)) {
+				ShowErrorMessage();
+			}
+
+			get_tile(x, y)->button = button;
 		}
 	}
 }
 
-void tct_onClick(enum ButtonKind buttonKind, int buttonID, HWND hwnd)
+void tct_onClick(enum ButtonKind buttonKind, int buttonID, struct window* window)
 {
 	switch (buttonKind)
 	{
@@ -39,60 +75,64 @@ void tct_onClick(enum ButtonKind buttonKind, int buttonID, HWND hwnd)
 		if (game_state.game_started == false) {
 			game_state.game_started = true; // Game started
 			for (uint8_t i = 0; i < 2; ++i) {
-				EnableWindow(Checkboxes[i], FALSE);
+				checkbox_enabled(&Checkboxes[i], false);
 			}
 		}
 
 		for (uint8_t y = 0; y < 3; ++y) {
 			for (uint8_t x = 0; x < 3; ++x) {
-				char player[3];
-				GetWindowText(Buttons[x][y].handle, player, 2);
+				struct button* button = &get_tile(x, y)->button;
+				char* player = button_gettext(button);
+				if (player == NULL) {
+					ShowErrorMessage();
+					return;
+				}
 				if (player[0] == 'X') {
-					board[x][y] = TCT_STATE_CROSS;
+					get_tile(x, y)->cell = TCT_CELL_CROSS;
 				}
 				else if (player[0] == 'O') {
-					board[x][y] = TCT_STATE_NOUGHT;
+					get_tile(x, y)->cell = TCT_CELL_NOUGHT;
 				}
 				else {
-					board[x][y] = TCT_STATE_EMPTY;
+					get_tile(x, y)->cell = TCT_CELL_EMPTY;
 				}
+				free(player);
 			}
 		}
 
 		char playerChar[2] = { 0 };
 		uint8_t x = 0;
 		uint8_t y = 0;
-		if (game_state.play_against_bot) {
-			if (game_state.impossible_mode) {
-				// TODO: Implement
+		if (game_state.state == TCT_STATE_PLAYER_VS_BOT) {
+			if (game_state.player == TCT_PLAYER1) {
+				playerChar[0] = 'X';
+				game_state.player = TCT_PLAYER2;
+				struct IntPair pair = TranslationTable[buttonID];
+				x = pair.x;
+				y = pair.y;
 			}
-			else {
-				if (game_state.player == TCT_PLAYER1) {
-					playerChar[0] = 'X';
-					game_state.player = TCT_PLAYER2;
-					struct IntPair pair = TranslationTable[buttonID];
-					x = pair.x;
-					y = pair.y;
-				}
-				else if (game_state.player == TCT_PLAYER2) {
-					playerChar[0] = 'O';
-					game_state.player = TCT_PLAYER1;
+			else if (game_state.player == TCT_PLAYER2) {
+				playerChar[0] = 'O';
+				game_state.player = TCT_PLAYER1;
 
-					while (1) {
-						uint8_t play = (uint8_t)randint(9);
-						x = play / 3;
-						y = play % 3;
-						if (board[x][y] == TCT_STATE_EMPTY) {
-							break;
-						}
+				while (1) {
+					uint8_t play = (uint8_t)randint(9);
+					x = play / 3;
+					y = play % 3;
+					if (get_tile(x, y)->cell == TCT_CELL_EMPTY) {
+						break;
 					}
 				}
 			}
 		}
+		else if (game_state.state == TCT_STATE_PLAYER_VS_AI) {
+			// TODO: Implement minimax
+		}
 		else {
-			struct IntPair pair = TranslationTable[buttonID];
-			x = pair.x;
-			y = pair.y;
+			int ID = buttonID - 3;
+			struct button* button = &board[ID].button;
+			x = ID / 3;
+			y = ID % 3;
 			if (game_state.player == TCT_PLAYER1) {
 				playerChar[0] = 'X';
 				game_state.player = TCT_PLAYER2;
@@ -103,25 +143,29 @@ void tct_onClick(enum ButtonKind buttonKind, int buttonID, HWND hwnd)
 			}
 		}
 
-		struct Button button = Buttons[x][y];
-		if (!SetWindowText(button.handle, playerChar)) {
+		if (!button_settext(&get_tile(x, y)->button, playerChar)) {
 			ShowErrorMessage();
-			return 0;
+			return;
 		}
 
 		for (uint8_t y = 0; y < 3; ++y) {
 			for (uint8_t x = 0; x < 3; ++x) {
-				char player[3];
-				GetWindowText(Buttons[x][y].handle, player, 2);
+				struct button* button = &get_tile(x, y)->button;
+				char* player = button_gettext(button);
+				if (player == NULL) {
+					ShowErrorMessage();
+					return;
+				}
 				if (player[0] == 'X') {
-					board[x][y] = TCT_STATE_CROSS;
+					get_tile(x,y)->cell = TCT_CELL_CROSS;
 				}
 				else if (player[0] == 'O') {
-					board[x][y] = TCT_STATE_NOUGHT;
+					get_tile(x, y)->cell = TCT_CELL_NOUGHT;
 				}
 				else {
-					board[x][y] = TCT_STATE_EMPTY;
+					get_tile(x, y)->cell = TCT_CELL_EMPTY;
 				}
+				free(player);
 			}
 		}
 
@@ -129,7 +173,8 @@ void tct_onClick(enum ButtonKind buttonKind, int buttonID, HWND hwnd)
 		if (winner.player != TCT_PLAYER_NONE) {
 			for (uint8_t y = 0; y < 3; ++y) {
 				for (uint8_t x = 0; x < 3; ++x) {
-					EnableWindow(Buttons[x][y].handle, FALSE);
+					struct button* button = &get_tile(x, y)->button;
+					button_enabled(button, false);
 				}
 			}
 		}
@@ -143,63 +188,63 @@ void tct_onClick(enum ButtonKind buttonKind, int buttonID, HWND hwnd)
 		}
 
 		if (winner.move == TCT_WINNING_MOVE_HORIZONTAL_1) {
-			Buttons[0][0].color = color;
-			Buttons[1][0].color = color;
-			Buttons[2][0].color = color;
-			RedrawWindow(hwnd, NULL, NULL, RDW_INVALIDATE);
+			get_tile(0, 0)->button.color = color;
+			get_tile(1, 0)->button.color = color;
+			get_tile(2, 0)->button.color = color;
+			window_refresh(window);
 		}
 		else if (winner.move == TCT_WINNING_MOVE_HORIZONTAL_2) {
-			Buttons[0][1].color = color;
-			Buttons[1][1].color = color;
-			Buttons[2][1].color = color;
-			RedrawWindow(hwnd, NULL, NULL, RDW_INVALIDATE);
+			get_tile(0, 1)->button.color = color;
+			get_tile(1, 1)->button.color = color;
+			get_tile(2, 1)->button.color = color;
+			window_refresh(window);
 		}
 		else if (winner.move == TCT_WINNING_MOVE_HORIZONTAL_3) {
-			Buttons[0][2].color = color;
-			Buttons[1][2].color = color;
-			Buttons[2][2].color = color;
-			RedrawWindow(hwnd, NULL, NULL, RDW_INVALIDATE);
+			get_tile(0, 2)->button.color = color;
+			get_tile(1, 2)->button.color = color;
+			get_tile(2, 2)->button.color = color;
+			window_refresh(window);
 		}
 		else if (winner.move == TCT_WINNING_MOVE_VERTICAL_1) {
-			Buttons[0][0].color = color;
-			Buttons[0][1].color = color;
-			Buttons[0][2].color = color;
-			RedrawWindow(hwnd, NULL, NULL, RDW_INVALIDATE);
+			get_tile(0, 0)->button.color = color;
+			get_tile(0, 1)->button.color = color;
+			get_tile(0, 2)->button.color = color;
+			window_refresh(window);
 		}
 		else if (winner.move == TCT_WINNING_MOVE_VERTICAL_2) {
-			Buttons[1][0].color = color;
-			Buttons[1][1].color = color;
-			Buttons[1][2].color = color;
-			RedrawWindow(hwnd, NULL, NULL, RDW_INVALIDATE);
+			get_tile(1, 0)->button.color = color;
+			get_tile(1, 1)->button.color = color;
+			get_tile(1, 2)->button.color = color;
+			window_refresh(window);
 		}
 		else if (winner.move == TCT_WINNING_MOVE_VERTICAL_3) {
-			Buttons[2][0].color = color;
-			Buttons[2][1].color = color;
-			Buttons[2][2].color = color;
-			RedrawWindow(hwnd, NULL, NULL, RDW_INVALIDATE);
+			get_tile(2, 0)->button.color = color;
+			get_tile(2, 1)->button.color = color;
+			get_tile(2, 2)->button.color = color;
+			window_refresh(window);
 		}
 		else if (winner.move == TCT_WINNING_MOVE_DIAGONAL_1) {
-			Buttons[0][0].color = color;
-			Buttons[1][1].color = color;
-			Buttons[2][2].color = color;
-			RedrawWindow(hwnd, NULL, NULL, RDW_INVALIDATE);
+			get_tile(0, 0)->button.color = color;
+			get_tile(1, 1)->button.color = color;
+			get_tile(2, 2)->button.color = color;
+			window_refresh(window);
 		}
 		else if (winner.move == TCT_WINNING_MOVE_DIAGONAL_2) {
-			Buttons[0][2].color = color;
-			Buttons[1][1].color = color;
-			Buttons[2][0].color = color;
-			RedrawWindow(hwnd, NULL, NULL, RDW_INVALIDATE);
+			get_tile(0, 2)->button.color = color;
+			get_tile(1, 1)->button.color = color;
+			get_tile(2, 0)->button.color = color;
+			window_refresh(window);
 		}
 
 		if (winner.player == TCT_PLAYER1) {
-			MessageBox(hwnd, "Player 1 wins", szTitle, NULL);
+			MessageBox(window->handle, "Player 1 wins", szTitle, NULL);
 		}
 		else if (winner.player == TCT_PLAYER2) {
-			MessageBox(hwnd, "Player 2 wins", szTitle, NULL);
+			MessageBox(window->handle, "Player 2 wins", szTitle, NULL);
 		}
 
-		if (game_state.play_against_bot && game_state.player == TCT_PLAYER2 && winner.player == TCT_PLAYER_NONE) {
-			tct_onClick(TCT_BUTTON_KIND_TICTACTOE_GRID, 3, hwnd);
+		if (game_state.state == TCT_STATE_PLAYER_VS_BOT && game_state.player == TCT_PLAYER2 && winner.player == TCT_PLAYER_NONE) {
+			tct_onClick(TCT_BUTTON_KIND_TICTACTOE_GRID, 3, window);
 		}
 
 		break;
@@ -207,33 +252,33 @@ void tct_onClick(enum ButtonKind buttonKind, int buttonID, HWND hwnd)
 	case TCT_BUTTON_KIND_PLAY_AGAINST_BOT:
 	case TCT_BUTTON_KIND_IMPOSSIBLE_MODE:
 	{
-
-		if (IsDlgButtonChecked(hwnd, buttonID)) {
-			CheckDlgButton(hwnd, buttonID, BST_UNCHECKED);
+		struct checkbox* checkbox = &Checkboxes[buttonID - 1];
+		if (checkbox_checked(checkbox)) {
+			checkbox_ticked(checkbox, true);
 
 			if (buttonID == 1) {
-				game_state.play_against_bot = false;
+				game_state.state = TCT_STATE_PLAYER_VS_BOT;
 			}
 			else if (buttonID == 2) {
-				game_state.impossible_mode = false;
+				game_state.state = TCT_STATE_PLAYER_VS_AI;
 			}
 		}
 		else {
-			CheckDlgButton(hwnd, buttonID, BST_CHECKED);
+			checkbox_ticked(checkbox, false);
 
 			if (buttonID == 1) {
-				game_state.play_against_bot = true;
+				game_state.state = TCT_STATE_PLAYER_VS_PLAYER;
 			}
 			else if (buttonID == 2) {
-				game_state.impossible_mode = true;
+				game_state.state = TCT_STATE_PLAYER_VS_BOT;
 			}
 		}
 
-		if (game_state.play_against_bot) {
-			EnableWindow(Checkboxes[1], TRUE);
+		if (game_state.state == TCT_STATE_PLAYER_VS_BOT) {
+			checkbox_enabled(&Checkboxes[1], true);
 		}
 		else {
-			EnableWindow(Checkboxes[1], FALSE);
+			checkbox_enabled(&Checkboxes[1], false);
 		}
 
 		break;
@@ -241,83 +286,83 @@ void tct_onClick(enum ButtonKind buttonKind, int buttonID, HWND hwnd)
 	}
 }
 
-struct Button FindButton(HWND handle)
+struct button* FindButton(HWND handle)
 {
 	for (uint8_t y = 0; y < 3; ++y) {
 		for (uint8_t x = 0; x < 3; ++x) {
-			struct Button button = Buttons[x][y];
-			if (button.handle == handle) {
+			struct button* button = &get_tile(x, y)->button;
+			if (button->handle == handle) {
 				return button;
 			}
 		}
 	}
-	struct Button result = { 0 };
-	return result;
+
+	return NULL;
 }
 
-struct WinnerStatus check_winner(enum State board[3][3])
+struct WinnerStatus check_winner()
 {
 	struct WinnerStatus result = { 0 };
 
-	enum State state_to_check = { 0 };
+	enum Cell state_to_check = { 0 };
 	enum Player player = { 0 };
 
 	for (uint8_t i = 0; i < 2; ++i) {
 
 		if (i == 0) {
-			state_to_check = TCT_STATE_CROSS;
+			state_to_check = TCT_CELL_CROSS;
 			player = TCT_PLAYER1;
 		}
 		else if (i == 1) {
-			state_to_check = TCT_STATE_NOUGHT;
+			state_to_check = TCT_CELL_NOUGHT;
 			player = TCT_PLAYER2;
 		}
 		
-		if (state_to_check == TCT_STATE_EMPTY) {
+		if (state_to_check == TCT_CELL_EMPTY) {
 			break;
 		}
 
 		/* Horizontal */
-		if (board[0][0] == state_to_check && board[1][0] == state_to_check && board[2][0] == state_to_check) {
+		if (get_tile(0, 0)->cell == state_to_check && get_tile(1, 0)->cell == state_to_check && get_tile(2, 0)->cell == state_to_check) {
 			result.player = player;
 			result.move = TCT_WINNING_MOVE_HORIZONTAL_1;
 			return result;
 		}
-		if (board[0][1] == state_to_check && board[1][1] == state_to_check && board[2][1] == state_to_check) {
+		if (get_tile(0, 1)->cell == state_to_check && get_tile(1, 1)->cell == state_to_check && get_tile(2, 1)->cell == state_to_check) {
 			result.player = player;
 			result.move = TCT_WINNING_MOVE_HORIZONTAL_2;
 			return result;
 		}
-		if (board[0][2] == state_to_check && board[1][2] == state_to_check && board[2][2] == state_to_check) {
+		if (get_tile(0, 2)->cell == state_to_check && get_tile(1, 2)->cell == state_to_check && get_tile(2, 2)->cell == state_to_check) {
 			result.player = player;
 			result.move = TCT_WINNING_MOVE_HORIZONTAL_3;
 			return result;
 		}
 
 		/* Vertical */
-		if (board[0][0] == state_to_check && board[0][1] == state_to_check && board[0][2] == state_to_check) {
+		if (get_tile(0, 0)->cell == state_to_check && get_tile(0, 1)->cell == state_to_check && get_tile(0, 2)->cell == state_to_check) {
 			result.player = player;
 			result.move = TCT_WINNING_MOVE_VERTICAL_1;
 			return result;
 		}
-		if (board[1][0] == state_to_check && board[1][1] == state_to_check && board[1][2] == state_to_check) {
+		if (get_tile(1, 0)->cell == state_to_check && get_tile(1, 1)->cell == state_to_check && get_tile(1, 2)->cell == state_to_check) {
 			result.player = player;
 			result.move = TCT_WINNING_MOVE_VERTICAL_2;
 			return result;
 		}
-		if (board[2][0] == state_to_check && board[2][1] == state_to_check && board[2][2] == state_to_check) {
+		if (get_tile(2, 0)->cell == state_to_check && get_tile(2, 1)->cell == state_to_check && get_tile(2, 2)->cell == state_to_check) {
 			result.player = player;
 			result.move = TCT_WINNING_MOVE_VERTICAL_3;
 			return result;
 		}
 
 		/* Diagonal */
-		if (board[0][0] == state_to_check && board[1][1] == state_to_check && board[2][2] == state_to_check) {
+		if (get_tile(0, 0)->cell == state_to_check && get_tile(1, 1)->cell == state_to_check && get_tile(2, 2)->cell == state_to_check) {
 			result.player = player;
 			result.move = TCT_WINNING_MOVE_DIAGONAL_1;
 			return result;
 		}
-		if (board[0][2] == state_to_check && board[1][1] == state_to_check && board[0][2] == state_to_check) {
+		if (get_tile(0, 2)->cell == state_to_check && get_tile(1, 1)->cell == state_to_check && get_tile(0, 2)->cell == state_to_check) {
 			result.player = player;
 			result.move = TCT_WINNING_MOVE_DIAGONAL_2;
 			return result;

@@ -3,6 +3,10 @@
 #include <stdbool.h>
 #include <Windows.h>
 
+#include "button.h"
+#include "checkbox.h"
+#include "window.h"
+
 enum ButtonKind
 {
 	TCT_BUTTON_KIND_NONE,
@@ -18,11 +22,11 @@ enum Player
 	TCT_PLAYER2
 };
 
-enum State
+enum Cell
 {
-	TCT_STATE_EMPTY = 0,
-	TCT_STATE_CROSS = 1,
-	TCT_STATE_NOUGHT = -1
+	TCT_CELL_EMPTY = 0,
+	TCT_CELL_CROSS = 1,
+	TCT_CELL_NOUGHT = -1
 };
 
 enum WinningMove
@@ -38,6 +42,13 @@ enum WinningMove
 	TCT_WINNING_MOVE_DIAGONAL_2
 };
 
+enum State
+{
+	TCT_STATE_PLAYER_VS_PLAYER,
+	TCT_STATE_PLAYER_VS_BOT,
+	TCT_STATE_PLAYER_VS_AI
+};
+
 struct WinnerStatus
 {
 	enum Player player;
@@ -46,25 +57,22 @@ struct WinnerStatus
 
 struct GameStuff
 {
-	bool play_against_bot;
-	bool impossible_mode;
+	enum State state;
 	enum Player player;
 	bool game_started;
 };
 
-static struct GameStuff game_state = { 0 };
-
-static HWND Checkboxes[2] = { 0 };
-
-struct Button
+struct tile
 {
-	HWND handle;
-	COLORREF color;
+	struct button button;
+	enum Cell cell;
 };
 
-static struct Button Buttons[3][3] = { 0 };
+static struct GameStuff game_state = { 0 };
 
-struct Button FindButton(HWND handle);
+static struct checkbox Checkboxes[2] = { 0 };
+
+struct button* FindButton(HWND handle);
 
 struct IntPair
 {
@@ -74,13 +82,13 @@ struct IntPair
 
 static struct IntPair TranslationTable[12] = { 0 };
 
-static enum State board[3][3] = { 0 };
+static struct tile board[9] = { 0 };
 
 // The string that appears in the application's title bar.
 static const char* szTitle = "TicTacToe";
 
 void tct_init();
 void tct_onCreate(HWND hwnd, HINSTANCE hInstance);
-void tct_onClick(enum ButtonKind buttonKind, int buttonID, HWND hwnd);
+void tct_onClick(enum ButtonKind buttonKind, int buttonID, struct window* window);
 
 struct WinnerStatus check_winner(enum State board[3][3]);
