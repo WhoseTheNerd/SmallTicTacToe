@@ -5,7 +5,11 @@ bool button_init(struct button* button, struct button_createinfo* createInfo)
 	button->color = createInfo->color;	
 	button->title = strdup(createInfo->title);
 	button->menuID = createInfo->menuID;
-	button->handle = CreateWindow("BUTTON", button->title, WS_TABSTOP | WS_VISIBLE | WS_CHILD | BS_DEFPUSHBUTTON | BS_OWNERDRAW, 
+	DWORD style = WS_TABSTOP | WS_VISIBLE | WS_CHILD | BS_DEFPUSHBUTTON;
+	if (createInfo->ownerDraw) {
+		style |= BS_OWNERDRAW;
+	}
+	button->handle = CreateWindow("BUTTON", button->title, style, 
 		createInfo->x, createInfo->y, createInfo->width, createInfo->height, createInfo->window_handle, (HMENU)createInfo->menuID, createInfo->hInstance, NULL);
 	
 	return button->handle != NULL;

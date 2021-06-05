@@ -18,11 +18,12 @@ struct button_createinfo
 	HINSTANCE hInstance;
 	const char* title;
 	COLORREF color;
-	uint8_t x;
-	uint8_t y;
-	uint8_t width;
-	uint8_t height;
+	uint32_t x;
+	uint32_t y;
+	uint32_t width;
+	uint32_t height;
 	uint8_t menuID;
+	bool ownerDraw;
 };
 
 bool button_init(struct button* button, struct button_createinfo* createInfo);

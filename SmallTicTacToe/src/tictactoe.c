@@ -1,6 +1,7 @@
 #include "tictactoe.h"
 
 #include <inttypes.h>
+#include <stdio.h>
 
 static struct tile* get_tile(uint8_t x, uint8_t y)
 {
@@ -12,10 +13,10 @@ void tct_init()
 	game_state.player = TCT_PLAYER1;
 }
 
-void tct_onCreate(HWND hwnd, HINSTANCE hInstance)
+void tct_onCreate(struct window* window, HINSTANCE hInstance)
 {
 	struct checkbox_createinfo createInfo = { 0 };
-	createInfo.window_handle = hwnd;
+	createInfo.window_handle = window->handle;
 	createInfo.height = hInstance;
 	createInfo.title = "Play Against Computer";
 	createInfo.x = 5;
@@ -39,17 +40,17 @@ void tct_onCreate(HWND hwnd, HINSTANCE hInstance)
 	checkbox_enabled(&Checkboxes[1], false);
 
 	struct button_createinfo buttonCreateInfo = { 0 };
-	buttonCreateInfo.window_handle = hwnd;
+	buttonCreateInfo.window_handle = window->handle;
 	buttonCreateInfo.hInstance = hInstance;
 	buttonCreateInfo.title = " ";
 	buttonCreateInfo.color = RGB(240, 240, 240);
 	buttonCreateInfo.width = 100;
 	buttonCreateInfo.height = 100;
-
+	buttonCreateInfo.ownerDraw = true;
 
 	for (uint8_t y = 0; y < 3; ++y) {
 		for (uint8_t x = 0; x < 3; ++x) {
-			uint8_t menuID = (y * 3) + x + 3;
+			uint8_t menuID = ((y * 3) + x) + 3;
 
 			struct button button = { 0 };
 
@@ -64,13 +65,32 @@ void tct_onCreate(HWND hwnd, HINSTANCE hInstance)
 			get_tile(x, y)->button = button;
 		}
 	}
+
+	buttonCreateInfo.title = "Reset";
+	buttonCreateInfo.x = 5;
+	buttonCreateInfo.y = 360;
+	buttonCreateInfo.width = 185;
+	buttonCreateInfo.height = 35;
+	buttonCreateInfo.menuID = 12;
+	buttonCreateInfo.ownerDraw = false;
+	if (!button_init(&reset_button, &buttonCreateInfo)) {
+		ShowErrorMessage();
+	}
 }
 
-void tct_onClick(enum ButtonKind buttonKind, int buttonID, struct window* window)
+void tct_onClick(int buttonID, struct window* window)
 {
-	switch (buttonKind)
+	switch (buttonID)
 	{
-	case TCT_BUTTON_KIND_TICTACTOE_GRID:
+	case 3:
+	case 4:
+	case 5:
+	case 6:
+	case 7:
+	case 8:
+	case 9:
+	case 10:
+	case 11:
 	{
 		if (game_state.game_started == false) {
 			game_state.game_started = true; // Game started
@@ -79,46 +99,26 @@ void tct_onClick(enum ButtonKind buttonKind, int buttonID, struct window* window
 			}
 		}
 
-		for (uint8_t y = 0; y < 3; ++y) {
-			for (uint8_t x = 0; x < 3; ++x) {
-				struct button* button = &get_tile(x, y)->button;
-				char* player = button_gettext(button);
-				if (player == NULL) {
-					ShowErrorMessage();
-					return;
-				}
-				if (player[0] == 'X') {
-					get_tile(x, y)->cell = TCT_CELL_CROSS;
-				}
-				else if (player[0] == 'O') {
-					get_tile(x, y)->cell = TCT_CELL_NOUGHT;
-				}
-				else {
-					get_tile(x, y)->cell = TCT_CELL_EMPTY;
-				}
-				free(player);
-			}
-		}
-
-		char playerChar[2] = { 0 };
+		enum Cell cell = TCT_CELL_EMPTY;
 		uint8_t x = 0;
 		uint8_t y = 0;
 		if (game_state.state == TCT_STATE_PLAYER_VS_BOT) {
 			if (game_state.player == TCT_PLAYER1) {
-				playerChar[0] = 'X';
+				cell = TCT_CELL_CROSS;
 				game_state.player = TCT_PLAYER2;
-				struct IntPair pair = TranslationTable[buttonID];
-				x = pair.x;
-				y = pair.y;
+
+				int ID = buttonID - 3;
+				x = ID % 3;
+				y = ID / 3;
 			}
 			else if (game_state.player == TCT_PLAYER2) {
-				playerChar[0] = 'O';
+				cell = TCT_CELL_NOUGHT;
 				game_state.player = TCT_PLAYER1;
 
 				while (1) {
 					uint8_t play = (uint8_t)randint(9);
-					x = play / 3;
-					y = play % 3;
+					x = play % 3;
+					y = play / 3;
 					if (get_tile(x, y)->cell == TCT_CELL_EMPTY) {
 						break;
 					}
@@ -131,42 +131,39 @@ void tct_onClick(enum ButtonKind buttonKind, int buttonID, struct window* window
 		else {
 			int ID = buttonID - 3;
 			struct button* button = &board[ID].button;
-			x = ID / 3;
-			y = ID % 3;
+			x = ID % 3;
+			y = ID / 3;
 			if (game_state.player == TCT_PLAYER1) {
-				playerChar[0] = 'X';
+				cell = TCT_CELL_CROSS;
 				game_state.player = TCT_PLAYER2;
 			}
 			else if (game_state.player == TCT_PLAYER2) {
-				playerChar[0] = 'O';
+				cell = TCT_CELL_NOUGHT;
 				game_state.player = TCT_PLAYER1;
 			}
+
+			/*char buffer[40] = { 0 };
+			snprintf(buffer, 40, "ButtonID: %d    TileID: %d", buttonID, ID);
+			MessageBox(window->handle, buffer, szTitle, 0);*/
 		}
 
-		if (!button_settext(&get_tile(x, y)->button, playerChar)) {
+		struct tile* tile = get_tile(x, y);
+		tile->cell = cell;
+
+		char playerChar[2] = { 0 };
+		if (cell == TCT_CELL_CROSS) {
+			playerChar[0] = 'X';
+		}
+		else if (cell == TCT_CELL_NOUGHT) {
+			playerChar[0] = 'O';
+		}
+		else {
+			playerChar[0] = ' ';
+		}
+
+		if (!button_settext(&tile->button, playerChar)) {
 			ShowErrorMessage();
 			return;
-		}
-
-		for (uint8_t y = 0; y < 3; ++y) {
-			for (uint8_t x = 0; x < 3; ++x) {
-				struct button* button = &get_tile(x, y)->button;
-				char* player = button_gettext(button);
-				if (player == NULL) {
-					ShowErrorMessage();
-					return;
-				}
-				if (player[0] == 'X') {
-					get_tile(x,y)->cell = TCT_CELL_CROSS;
-				}
-				else if (player[0] == 'O') {
-					get_tile(x, y)->cell = TCT_CELL_NOUGHT;
-				}
-				else {
-					get_tile(x, y)->cell = TCT_CELL_EMPTY;
-				}
-				free(player);
-			}
 		}
 
 		struct WinnerStatus winner = check_winner(board);
@@ -244,13 +241,13 @@ void tct_onClick(enum ButtonKind buttonKind, int buttonID, struct window* window
 		}
 
 		if (game_state.state == TCT_STATE_PLAYER_VS_BOT && game_state.player == TCT_PLAYER2 && winner.player == TCT_PLAYER_NONE) {
-			tct_onClick(TCT_BUTTON_KIND_TICTACTOE_GRID, 3, window);
+			tct_onClick(3, window);
 		}
 
 		break;
 	}
-	case TCT_BUTTON_KIND_PLAY_AGAINST_BOT:
-	case TCT_BUTTON_KIND_IMPOSSIBLE_MODE:
+	case 1:
+	case 2:
 	{
 		struct checkbox* checkbox = &Checkboxes[buttonID - 1];
 		if (checkbox_checked(checkbox)) {
@@ -283,6 +280,46 @@ void tct_onClick(enum ButtonKind buttonKind, int buttonID, struct window* window
 
 		break;
 	}
+	case 12:
+	{
+		game_state.player = TCT_PLAYER1;
+		for (uint8_t i = 0; i < 2; ++i) {
+			struct checkbox* checkbox = &Checkboxes[i];
+			checkbox_enabled(checkbox, true);
+		}
+		for (uint8_t i = 0; i < 9; ++i) {
+			struct tile* tile = &board[i];
+			tile->button.color = RGB(240, 240, 240);
+			button_settext(&tile->button, " ");
+			button_enabled(&tile->button, true);
+			tile->cell = TCT_CELL_EMPTY;
+		}
+		break;
+	}
+	}
+}
+
+void tct_updateBoard()
+{
+	for (uint8_t y = 0; y < 3; ++y) {
+		for (uint8_t x = 0; x < 3; ++x) {
+			struct button* button = &get_tile(x, y)->button;
+			char* player = button_gettext(button);
+			if (player == NULL) {
+				ShowErrorMessage();
+				return;
+			}
+			if (player[0] == 'X') {
+				get_tile(x, y)->cell = TCT_CELL_CROSS;
+			}
+			else if (player[0] == 'O') {
+				get_tile(x, y)->cell = TCT_CELL_NOUGHT;
+			}
+			else {
+				get_tile(x, y)->cell = TCT_CELL_EMPTY;
+			}
+			free(player);
+		}
 	}
 }
 
@@ -362,7 +399,7 @@ struct WinnerStatus check_winner()
 			result.move = TCT_WINNING_MOVE_DIAGONAL_1;
 			return result;
 		}
-		if (get_tile(0, 2)->cell == state_to_check && get_tile(1, 1)->cell == state_to_check && get_tile(0, 2)->cell == state_to_check) {
+		if (get_tile(0, 2)->cell == state_to_check && get_tile(1, 1)->cell == state_to_check && get_tile(2, 0)->cell == state_to_check) {
 			result.player = player;
 			result.move = TCT_WINNING_MOVE_DIAGONAL_2;
 			return result;

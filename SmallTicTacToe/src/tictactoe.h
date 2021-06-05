@@ -7,14 +7,6 @@
 #include "checkbox.h"
 #include "window.h"
 
-enum ButtonKind
-{
-	TCT_BUTTON_KIND_NONE,
-	TCT_BUTTON_KIND_TICTACTOE_GRID,
-	TCT_BUTTON_KIND_PLAY_AGAINST_BOT,
-	TCT_BUTTON_KIND_IMPOSSIBLE_MODE
-};
-
 enum Player
 {
 	TCT_PLAYER_NONE,
@@ -74,21 +66,14 @@ static struct checkbox Checkboxes[2] = { 0 };
 
 struct button* FindButton(HWND handle);
 
-struct IntPair
-{
-	int x;
-	int y;
-};
-
-static struct IntPair TranslationTable[12] = { 0 };
-
 static struct tile board[9] = { 0 };
+static struct button reset_button = { 0 };
 
 // The string that appears in the application's title bar.
 static const char* szTitle = "TicTacToe";
 
 void tct_init();
-void tct_onCreate(HWND hwnd, HINSTANCE hInstance);
-void tct_onClick(enum ButtonKind buttonKind, int buttonID, struct window* window);
-
-struct WinnerStatus check_winner(enum State board[3][3]);
+void tct_onCreate(struct window* window, HINSTANCE hInstance);
+void tct_onClick(int buttonID, struct window* window);
+void tct_updateBoard();
+struct WinnerStatus check_winner();

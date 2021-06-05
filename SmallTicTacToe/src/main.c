@@ -15,7 +15,8 @@ void ShowErrorMessage();
 
 static LRESULT on_create(HWND hwnd, WPARAM wParam, LPARAM lParam, struct window* window)
 {
-	tct_onCreate(hwnd, ((LPCREATESTRUCT)lParam)->hInstance);
+	window->handle = hwnd;
+	tct_onCreate(window, ((LPCREATESTRUCT)lParam)->hInstance);
 
 	return 0;
 }
@@ -24,19 +25,7 @@ static LRESULT on_command(HWND hwnd, WPARAM wParam, LPARAM lParam, struct window
 {
 	int buttonID = LOWORD(wParam);
 
-	enum ButtonKind buttonKind = TCT_BUTTON_KIND_NONE;
-
-	if (buttonID == 1) {
-		buttonKind = TCT_BUTTON_KIND_PLAY_AGAINST_BOT;
-	}
-	else if (buttonID == 2) {
-		buttonKind = TCT_BUTTON_KIND_IMPOSSIBLE_MODE;
-	}
-	else if (buttonID > 2 && buttonID < 12) {
-		buttonKind = TCT_BUTTON_KIND_TICTACTOE_GRID;
-	}
-
-	tct_onClick(buttonKind, buttonID, window);
+	tct_onClick(buttonID, window);
 
 	return 0;
 }
